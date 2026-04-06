@@ -8,7 +8,8 @@ load_lang 1_start
 # ===== 启动完成提示 =====
 startover() {
     top_box "\033[32m$START_SERVICE_OK\033[0m" \
-        "$START_WEB_HINT \033[4;36mhttp://$host$hostdir\033[0m"
+        "$START_WEB_HINT \033[4;36mhttp://$host$hostdir\033[0m" \
+        "$START_WEBGUI_HINT \033[4;36mhttp://$host:${web_port:-9000}\033[0m"
     if [ "$firewall_area" = 4 ]; then
         content_line ""
         content_line "$START_PAC_HINT \033[4;32mhttp://$host:$db_port/ui/pac\033[0m"

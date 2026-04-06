@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache,no-store,must-revalidate">
+<title>ShellCrash 管理</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--card:#1a1d27;--border:#2a2d3a;
+  --text:#e2e8f0;--muted:#6b7280;--accent:#3b82f6;
+  --green:#22c55e;--red:#ef4444;--yellow:#f59e0b;
+  --radius:8px;--font:'Segoe UI',system-ui,sans-serif
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh}
+header{background:var(--card);border-bottom:1px solid var(--border);padding:12px 20px;
+  display:flex;align-items:center;gap:12px}
+header h1{font-size:1.2rem;font-weight:600;color:var(--text)}
+#status-dot{width:10px;height:10px;border-radius:50%;background:var(--muted);
+  box-shadow:0 0 0 3px rgba(107,114,128,.2);transition:all .3s}
+#status-dot.running{background:var(--green);box-shadow:0 0 0 3px rgba(34,197,94,.2)}
+#status-dot.stopped{background:var(--red);box-shadow:0 0 0 3px rgba(239,68,68,.2)}
+#status-text{font-size:.8rem;color:var(--muted)}
+nav{background:var(--card);border-bottom:1px solid var(--border);
+  display:flex;padding:0 16px;overflow-x:auto}
+nav button{background:none;border:none;color:var(--muted);cursor:pointer;
+  padding:12px 16px;font-size:.9rem;border-bottom:2px solid transparent;
+  white-space:nowrap;transition:all .2s}
+nav button:hover{color:var(--text)}
+nav button.active{color:var(--accent);border-bottom-color:var(--accent)}
+main{padding:20px;max-width:800px;margin:0 auto}
+.tab{display:none}.tab.active{display:block}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:20px;margin-bottom:16px}
+.card h2{font-size:1rem;font-weight:600;margin-bottom:16px;color:var(--text)}
+.row{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+label{font-size:.85rem;color:var(--muted);min-width:140px}
+.val{font-size:.9rem;font-weight:500}
+input,select{background:#0f1117;border:1px solid var(--border);color:var(--text);
+  border-radius:var(--radius);padding:6px 10px;font-size:.9rem;width:100%;max-width:280px}
+input:focus,select:focus{outline:none;border-color:var(--accent)}
+.btn{border:none;border-radius:var(--radius);padding:7px 16px;font-size:.85rem;
+  cursor:pointer;font-weight:500;transition:all .2s}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover:not(:disabled){background:#2563eb}
+.btn-success{background:var(--green);color:#fff}
+.btn-success:hover:not(:disabled){background:#16a34a}
+.btn-danger{background:var(--red);color:#fff}
+.btn-danger:hover:not(:disabled){background:#dc2626}
+.btn-warning{background:var(--yellow);color:#fff}
+.btn-warning:hover:not(:disabled){background:#d97706}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover:not(:disabled){background:var(--border);color:var(--text)}
+.btn-sm{padding:4px 10px;font-size:.8rem}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.sub-list{list-style:none}
+.sub-item{display:flex;align-items:center;justify-content:space-between;
+  padding:10px 0;border-bottom:1px solid var(--border);gap:8px;flex-wrap:wrap}
+.sub-item:last-child{border-bottom:none}
+.sub-name{font-weight:600;font-size:.9rem}
+.sub-kind{font-size:.75rem;color:var(--muted);background:var(--border);
+  border-radius:4px;padding:2px 6px}
+.sub-link{font-size:.75rem;color:var(--muted);word-break:break-all;margin-top:2px}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:5px}
+.form-group input,.form-group select{max-width:100%}
+.alert{border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;font-size:.85rem}
+.alert-success{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:var(--green)}
+.alert-error{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--red)}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);
+  border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  background:#334155;color:#fff;padding:10px 20px;border-radius:6px;
+  font-size:.85rem;opacity:0;pointer-events:none;transition:opacity .3s;z-index:999}
+#toast.show{opacity:1}
+/* modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);
+  display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:24px;width:100%;max-width:460px}
+.modal h2{margin-bottom:16px;font-size:1rem}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.hidden{display:none!important}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:520px){.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>ShellCrash</h1>
+  <div id="status-dot"></div>
+  <span id="status-text">检测中…</span>
+</header>
+
+<nav>
+  <button id="tab-btn-dashboard" class="active" onclick="showTab('dashboard')">仪表盘</button>
+  <button id="tab-btn-subscriptions" onclick="showTab('subscriptions')">订阅管理</button>
+  <button id="tab-btn-settings" onclick="showTab('settings')">基本设置</button>
+  <button id="tab-btn-advanced" onclick="showTab('advanced')">高级设置</button>
+</nav>
+
+<main>
+  <!-- ========== Dashboard ========== -->
+  <div id="tab-dashboard" class="tab active">
+    <div class="card">
+      <h2>服务状态</h2>
+      <div class="row">
+        <label>核心进程</label>
+        <span class="val" id="svc-running">—</span>
+      </div>
+      <div class="btns" style="margin-top:12px">
+        <button class="btn btn-success" onclick="svcAction('start')">启动</button>
+        <button class="btn btn-danger"  onclick="svcAction('stop')">停止</button>
+        <button class="btn btn-warning" onclick="svcAction('restart')">重启</button>
+        <button class="btn btn-ghost"   onclick="refreshStatus()">刷新</button>
+      </div>
+      <div id="svc-msg" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+  <!-- ========== Subscriptions ========== -->
+  <div id="tab-subscriptions" class="tab">
+    <div class="card">
+      <h2>订阅列表
+        <button class="btn btn-primary btn-sm" style="float:right"
+          onclick="openAddSub()">+ 添加</button>
+      </h2>
+      <ul class="sub-list" id="sub-list"><li style="color:var(--muted)">加载中…</li></ul>
+    </div>
+    <div class="card" id="generate-card">
+      <h2>生成配置</h2>
+      <p style="font-size:.85rem;color:var(--muted);margin-bottom:12px">
+        根据订阅列表重新生成 providers 配置文件。
+      </p>
+      <button class="btn btn-primary" onclick="generateProviders()">生成 Providers</button>
+      <div id="gen-msg" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+  <!-- ========== Settings ========== -->
+  <div id="tab-settings" class="tab">
+    <div class="card">
+      <h2>基本设置</h2>
+      <div class="grid2" id="settings-form">
+        <!-- populated by JS -->
+      </div>
+      <div style="margin-top:16px" class="btns">
+        <button class="btn btn-primary" onclick="saveSettings()">保存</button>
+        <button class="btn btn-ghost"   onclick="loadSettings()">重置</button>
+      </div>
+      <div id="set-msg" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+  <!-- ========== Advanced ========== -->
+  <div id="tab-advanced" class="tab">
+    <div class="card">
+      <h2>高级设置</h2>
+      <div class="grid2" id="advanced-form">
+        <!-- populated by JS -->
+      </div>
+      <div style="margin-top:16px" class="btns">
+        <button class="btn btn-primary" onclick="saveAdvanced()">保存</button>
+        <button class="btn btn-ghost"   onclick="loadAdvanced()">重置</button>
+      </div>
+      <div id="adv-msg" style="margin-top:10px"></div>
+    </div>
+  </div>
+</main>
+
+<!-- ========== Add/Edit Subscription Modal ========== -->
+<div class="modal-overlay hidden" id="sub-modal">
+  <div class="modal">
+    <h2 id="sub-modal-title">添加订阅</h2>
+    <div class="form-group">
+      <label>名称（字母/数字/下划线，最长12位）</label>
+      <input type="text" id="sub-name" placeholder="my_sub" maxlength="12">
+    </div>
+    <div class="form-group">
+      <label>类型</label>
+      <select id="sub-mode" onchange="onSubModeChange()">
+        <option value="provider">Provider（订阅链接）</option>
+        <option value="uri">URI（单节点）</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>链接 / URI</label>
+      <input type="text" id="sub-link" placeholder="https://...">
+    </div>
+    <div id="sub-provider-opts">
+      <div class="grid2">
+        <div class="form-group">
+          <label>更新间隔（小时）</label>
+          <input type="number" id="sub-interval" value="3" min="1">
+        </div>
+        <div class="form-group">
+          <label>二次更新间隔（小时）</label>
+          <input type="number" id="sub-interval2" value="12" min="1">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>User-Agent</label>
+        <input type="text" id="sub-ua" value="clash.meta">
+      </div>
+      <div class="grid2">
+        <div class="form-group">
+          <label>排除节点（关键词）</label>
+          <input type="text" id="sub-exclude" placeholder="可选">
+        </div>
+        <div class="form-group">
+          <label>包含节点（关键词）</label>
+          <input type="text" id="sub-include" placeholder="可选">
+        </div>
+      </div>
+    </div>
+    <div id="sub-modal-msg"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeSubModal()">取消</button>
+      <button class="btn btn-primary" id="sub-save-btn" onclick="saveSub()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== Token / Auth Modal ========== -->
+<div class="modal-overlay hidden" id="auth-modal">
+  <div class="modal">
+    <h2>输入认证密钥</h2>
+    <p style="font-size:.85rem;color:var(--muted);margin-bottom:14px">
+      如果 ShellCrash 设置了 secret，请在此输入；否则留空直接继续。
+    </p>
+    <div class="form-group">
+      <label>Secret / Token</label>
+      <input type="password" id="auth-input" placeholder="留空表示无需认证">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="saveAuth()">确认</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// =====================================================================
+// Config & helpers
+// =====================================================================
+const API = '/cgi-bin/api.sh';
+let token = localStorage.getItem('sc_token') || '';
+
+function qs(params) {
+  const p = Object.assign({ token }, params);
+  return Object.entries(p)
+    .filter(([, v]) => v !== undefined && v !== null)
+    .map(([k, v]) => encodeURIComponent(k) + '=' + encodeURIComponent(v))
+    .join('&');
+}
+
+async function api(action, subaction, params = {}) {
+  const url = API + '?' + qs(Object.assign({ action, subaction }, params));
+  try {
+    const r = await fetch(url);
+    return await r.json();
+  } catch (e) {
+    return { ok: false, message: 'network_error' };
+  }
+}
+
+let toastTimer;
+function toast(msg, isErr) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.background = isErr ? '#7f1d1d' : '#1e3a5f';
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+function showAlert(id, msg, isErr) {
+  const el = document.getElementById(id);
+  if (!msg) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="alert ${isErr ? 'alert-error' : 'alert-success'}">${msg}</div>`;
+}
+
+// =====================================================================
+// Tab navigation
+// =====================================================================
+const TABS = ['dashboard', 'subscriptions', 'settings', 'advanced'];
+function showTab(name) {
+  TABS.forEach(t => {
+    document.getElementById('tab-' + t).classList.toggle('active', t === name);
+    document.getElementById('tab-btn-' + t).classList.toggle('active', t === name);
+  });
+  if (name === 'subscriptions') loadSubs();
+  if (name === 'settings')      loadSettings();
+  if (name === 'advanced')      loadAdvanced();
+}
+
+// =====================================================================
+// Auth modal
+// =====================================================================
+function openAuthModal() {
+  document.getElementById('auth-input').value = token;
+  document.getElementById('auth-modal').classList.remove('hidden');
+}
+function saveAuth() {
+  token = document.getElementById('auth-input').value.trim();
+  localStorage.setItem('sc_token', token);
+  document.getElementById('auth-modal').classList.add('hidden');
+  refreshStatus();
+}
+
+// =====================================================================
+// Service
+// =====================================================================
+async function refreshStatus() {
+  const dot  = document.getElementById('status-dot');
+  const txt  = document.getElementById('status-text');
+  const span = document.getElementById('svc-running');
+  dot.className = '';
+  txt.textContent = '检测中…';
+  const d = await api('service', 'status');
+  if (d.ok === false && d.message === 'unauthorized') {
+    openAuthModal(); return;
+  }
+  if (d.service) {
+    const running = d.service.running;
+    dot.className  = running ? 'running' : 'stopped';
+    txt.textContent = running ? '运行中' : '已停止';
+    span.textContent = running ? '✅ 运行中' : '❌ 已停止';
+  }
+}
+
+async function svcAction(act) {
+  showAlert('svc-msg', '<span class="spinner"></span> 处理中…');
+  const d = await api('service', act);
+  if (d.message === 'unauthorized') { openAuthModal(); return; }
+  showAlert('svc-msg', d.ok ? '操作成功' : ('失败: ' + d.message), !d.ok);
+  await refreshStatus();
+}
+
+// =====================================================================
+// Subscriptions
+// =====================================================================
+async function loadSubs() {
+  const ul = document.getElementById('sub-list');
+  ul.innerHTML = '<li style="color:var(--muted)"><span class="spinner"></span> 加载中…</li>';
+  const d = await api('subscription', 'list');
+  if (!d.ok) { ul.innerHTML = '<li style="color:var(--red)">加载失败: ' + d.message + '</li>'; return; }
+  const subs = d.subscriptions || [];
+  if (!subs.length) {
+    ul.innerHTML = '<li style="color:var(--muted);padding:8px 0">暂无订阅</li>';
+    return;
+  }
+  ul.innerHTML = subs.map(s => `
+    <li class="sub-item">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span class="sub-name">${esc(s.name)}</span>
+          <span class="sub-kind">${esc(s.kind)}</span>
+        </div>
+        <div class="sub-link">${esc(s.link)}</div>
+      </div>
+      <div class="btns">
+        <button class="btn btn-ghost btn-sm" onclick="openEditSub(${JSON.stringify(s)})">编辑</button>
+        <button class="btn btn-danger btn-sm" onclick="delSub('${esc(s.name)}')">删除</button>
+      </div>
+    </li>`).join('');
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function openAddSub() {
+  document.getElementById('sub-modal-title').textContent = '添加订阅';
+  document.getElementById('sub-name').value = '';
+  document.getElementById('sub-name').disabled = false;
+  document.getElementById('sub-mode').value = 'provider';
+  document.getElementById('sub-link').value = '';
+  document.getElementById('sub-interval').value = '3';
+  document.getElementById('sub-interval2').value = '12';
+  document.getElementById('sub-ua').value = 'clash.meta';
+  document.getElementById('sub-exclude').value = '';
+  document.getElementById('sub-include').value = '';
+  document.getElementById('sub-modal-msg').innerHTML = '';
+  onSubModeChange();
+  document.getElementById('sub-modal').classList.remove('hidden');
+  document.getElementById('sub-save-btn').dataset.editmode = 'add';
+}
+
+function openEditSub(s) {
+  document.getElementById('sub-modal-title').textContent = '编辑订阅';
+  document.getElementById('sub-name').value = s.name;
+  document.getElementById('sub-name').disabled = true;
+  document.getElementById('sub-mode').value = s.kind || 'provider';
+  document.getElementById('sub-link').value = s.link || '';
+  document.getElementById('sub-interval').value = s.interval || '3';
+  document.getElementById('sub-interval2').value = s.interval2 || '12';
+  document.getElementById('sub-ua').value = s.ua || 'clash.meta';
+  document.getElementById('sub-exclude').value = s.exclude || '';
+  document.getElementById('sub-include').value = s.include || '';
+  document.getElementById('sub-modal-msg').innerHTML = '';
+  onSubModeChange();
+  document.getElementById('sub-modal').classList.remove('hidden');
+  document.getElementById('sub-save-btn').dataset.editmode = 'edit';
+}
+
+function onSubModeChange() {
+  const mode = document.getElementById('sub-mode').value;
+  document.getElementById('sub-provider-opts').style.display = mode === 'provider' ? '' : 'none';
+}
+
+function closeSubModal() {
+  document.getElementById('sub-modal').classList.add('hidden');
+}
+
+async function saveSub() {
+  const btn = document.getElementById('sub-save-btn');
+  const mode = document.getElementById('sub-mode').value;
+  const params = {
+    name:      document.getElementById('sub-name').value.trim(),
+    mode,
+    link:      document.getElementById('sub-link').value.trim(),
+    interval:  document.getElementById('sub-interval').value,
+    interval2: document.getElementById('sub-interval2').value,
+    ua:        document.getElementById('sub-ua').value.trim(),
+    exclude:   document.getElementById('sub-exclude').value.trim(),
+    include:   document.getElementById('sub-include').value.trim(),
+  };
+  if (!params.name || !params.link) {
+    showAlert('sub-modal-msg', '名称和链接不能为空', true); return;
+  }
+  const subact = btn.dataset.editmode === 'edit' ? 'update' : 'add';
+  showAlert('sub-modal-msg', '<span class="spinner"></span> 保存中…');
+  const d = await api('subscription', subact, params);
+  if (!d.ok) { showAlert('sub-modal-msg', '失败: ' + d.message, true); return; }
+  closeSubModal();
+  toast('订阅已保存');
+  loadSubs();
+}
+
+async function delSub(name) {
+  if (!confirm('确认删除订阅「' + name + '」？')) return;
+  const d = await api('subscription', 'delete', { name });
+  toast(d.ok ? '已删除' : ('删除失败: ' + d.message), !d.ok);
+  if (d.ok) loadSubs();
+}
+
+async function generateProviders() {
+  showAlert('gen-msg', '<span class="spinner"></span> 生成中…');
+  const d = await api('subscription', 'generate');
+  showAlert('gen-msg', d.ok ? '✅ 生成成功' : ('失败: ' + d.message), !d.ok);
+}
+
+// =====================================================================
+// Settings (basic)
+// =====================================================================
+const SETTINGS_FIELDS = [
+  { key:'firewall_area', label:'防火墙模式', type:'select',
+    options:[['1','1-无规则（仅代理）'],['2','2-绕过CN-IP'],['3','3-绕过CN-IP+域名'],
+             ['4','4-只代理局域网'],['5','5-主旁转发']] },
+  { key:'redir_mod',  label:'重定向模式', type:'select',
+    options:[['Redir','Redir'],['Tproxy','Tproxy'],['Tun','Tun'],['Mix','Mix']] },
+  { key:'dns_mod',    label:'DNS 模式', type:'select',
+    options:[['redir_host','redir_host'],['fake-ip','fake-ip']] },
+  { key:'mix_port',   label:'混合代理端口',   type:'number', min:1, max:65535 },
+  { key:'redir_port', label:'透明代理端口',   type:'number', min:1, max:65535 },
+  { key:'dns_port',   label:'DNS 端口',       type:'number', min:1, max:65535 },
+  { key:'db_port',    label:'控制面板端口',   type:'number', min:1, max:65535 },
+  { key:'skip_cert',  label:'跳过证书验证', type:'select',
+    options:[['ON','开启'],['OFF','关闭']] },
+  { key:'sniffer',    label:'域名嗅探', type:'select',
+    options:[['ON','开启'],['OFF','关闭']] },
+  { key:'secret',     label:'API 密钥 (secret)', type:'text' },
+  { key:'host',       label:'本机 IP（可选）', type:'text', placeholder:'自动检测时留空' },
+];
+
+const ADVANCED_FIELDS = [
+  { key:'table',           label:'路由表序号', type:'number', min:1, max:100000 },
+  { key:'authentication',  label:'代理认证 (user:pass)', type:'text', placeholder:'user:pass' },
+  { key:'disoverride',     label:'禁用 override', type:'select',
+    options:[['0','否（使用 override）'],['1','是（禁用 override）']] },
+  { key:'proxies_bypass',  label:'代理绕过', type:'select',
+    options:[['ON','开启'],['OFF','关闭']] },
+];
+
+function buildForm(containerId, fields, values) {
+  const c = document.getElementById(containerId);
+  c.innerHTML = fields.map(f => {
+    const v = values[f.key] !== undefined ? esc(values[f.key]) : '';
+    let input;
+    if (f.type === 'select') {
+      const opts = f.options.map(([val, lbl]) =>
+        `<option value="${val}" ${val === values[f.key] ? 'selected' : ''}>${lbl}</option>`
+      ).join('');
+      input = `<select id="cfg-${f.key}">${opts}</select>`;
+    } else {
+      input = `<input type="${f.type}" id="cfg-${f.key}" value="${v}"
+        ${f.min !== undefined ? 'min="'+f.min+'"' : ''}
+        ${f.max !== undefined ? 'max="'+f.max+'"' : ''}
+        ${f.placeholder ? 'placeholder="'+f.placeholder+'"' : ''}>`;
+    }
+    return `<div class="form-group"><label>${f.label}</label>${input}</div>`;
+  }).join('');
+}
+
+async function loadSettings() {
+  const keys = SETTINGS_FIELDS.map(f => f.key).join(',');
+  const d = await api('settings', 'get', { keys });
+  if (!d.ok) return;
+  buildForm('settings-form', SETTINGS_FIELDS, d.config || {});
+}
+
+async function saveSettings() {
+  showAlert('set-msg', '');
+  let ok = true, errMsg = '';
+  for (const f of SETTINGS_FIELDS) {
+    const el = document.getElementById('cfg-' + f.key);
+    if (!el) continue;
+    const val = el.value;
+    const d = await api('settings', 'set', { key: f.key, value: val });
+    if (!d.ok) { ok = false; errMsg += f.label + ': ' + d.message + '; '; }
+  }
+  showAlert('set-msg', ok ? '✅ 保存成功' : ('部分失败: ' + errMsg), !ok);
+}
+
+async function loadAdvanced() {
+  const keys = ADVANCED_FIELDS.map(f => f.key).join(',');
+  const d = await api('advanced', 'get', { keys });
+  if (!d.ok) return;
+  buildForm('advanced-form', ADVANCED_FIELDS, d.config || {});
+}
+
+async function saveAdvanced() {
+  showAlert('adv-msg', '');
+  let ok = true, errMsg = '';
+  for (const f of ADVANCED_FIELDS) {
+    const el = document.getElementById('cfg-' + f.key);
+    if (!el) continue;
+    const val = el.value;
+    const d = await api('advanced', 'set', { key: f.key, value: val });
+    if (!d.ok) { ok = false; errMsg += f.label + ': ' + d.message + '; '; }
+  }
+  showAlert('adv-msg', ok ? '✅ 保存成功' : ('部分失败: ' + errMsg), !ok);
+}
+
+// =====================================================================
+// Init
+// =====================================================================
+refreshStatus();
+</script>
+</body>
+</html>

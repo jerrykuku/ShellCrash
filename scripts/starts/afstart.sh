@@ -30,6 +30,8 @@ if [ -n "$test" -o -n "$(pidof CrashCore)" ]; then
 		. "$CRASHDIR"/libs/web_restore.sh
 		web_restore >/dev/null 2>&1
 	}
+	#启动WebGUI
+	[ -x "$CRASHDIR/starts/webgui.sh" ] && "$CRASHDIR/starts/webgui.sh" start >/dev/null 2>&1 &
 	#推送日志
 	{
 		sleep 5

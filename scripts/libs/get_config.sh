@@ -8,6 +8,7 @@
 [ -z "$redir_port" ] && redir_port=7892
 [ -z "$tproxy_port" ] && tproxy_port=7893
 [ -z "$db_port" ] && db_port=9999
+[ -z "$web_port" ] && web_port=9000
 [ -z "$dns_port" ] && dns_port=1053
 [ -z "$dns_redir_port" ] && dns_redir_port="$dns_port"
 [ -z "$fwmark" ] && fwmark="$redir_port"

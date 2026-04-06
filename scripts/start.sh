@@ -95,6 +95,8 @@ stop)
         stop_firewall
     fi
     killall CrashCore 2>/dev/null
+    #停止WebGUI
+    [ -x "$CRASHDIR/starts/webgui.sh" ] && "$CRASHDIR/starts/webgui.sh" stop >/dev/null 2>&1
     #清理缓存目录
     rm -rf "$TMPDIR"/CrashCore
     ;;
