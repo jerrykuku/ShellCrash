@@ -34,6 +34,10 @@ start_l(){
 
 case "$1" in
 
+web)
+    shift
+    "$CRASHDIR"/web_control.sh "$@"
+    ;;
 start)
     [ -n "$(pidof CrashCore)" ] && $0 stop #禁止多实例
     stop_firewall                          #清理路由策略

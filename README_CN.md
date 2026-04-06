@@ -171,6 +171,33 @@ crash -h     # 查看命令帮助列表
 | net-tools | 极低 | 缺少时无法自动检测端口占用 |
 | ubus / iproute-doc | 极低 | 缺少时无法自动获取本机 Host 地址 |
 
+### 无 Dashboard 的 Web 控制（实验）
+当你只需要订阅管理、基础设置、服务启停与高级配置时，可直接调用：
+
+```sh
+sh /etc/ShellCrash/start.sh web <模块> <动作> [参数]
+```
+
+示例：
+
+```sh
+# 服务状态
+sh /etc/ShellCrash/start.sh web service status token=<secret>
+
+# 添加订阅（provider）
+sh /etc/ShellCrash/start.sh web subscription add token=<secret> name=test mode=provider link=https://example.com/sub.yaml
+
+# 读取基础/高级配置
+sh /etc/ShellCrash/start.sh web settings get token=<secret>
+sh /etc/ShellCrash/start.sh web advanced get token=<secret>
+```
+
+支持模块：
+- `service`：`start|stop|restart|status`
+- `subscription`：`list|add|update|delete|generate`
+- `settings`：`get|set`
+- `advanced`：`get|set`
+
 ---
 
 ## :link: 相关链接
