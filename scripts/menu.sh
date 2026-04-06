@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Copyright (C) Juewuy
 
 CRASHDIR=$(
@@ -290,7 +290,7 @@ case "$1" in
     ;;
 -t)
     shtype=sh
-    [ -n "$(ls -l /bin/sh | grep -o dash)" ] && shtype=bash
+    [ -n "$(ls -l /bin/bash | grep -o dash)" ] && shtype=bash
     "$shtype" -x "$CRASHDIR"/menu.sh -l
     ;;
 -s)
@@ -309,7 +309,7 @@ case "$1" in
     "$CRASHDIR"/start.sh stop
     ;;
 -d)
-    shtype=sh && [ -n "$(ls -l /bin/sh | grep -o dash)" ] && shtype=bash
+    shtype=sh && [ -n "$(ls -l /bin/bash | grep -o dash)" ] && shtype=bash
     comp_box "$MENU_TEST_RUNNING_1" \
         "$MENU_TEST_RUNNING_2\033[36;4mhttps://t.me/ShellClash\033[0m"
     "$shtype" "$CRASHDIR"/start.sh debug >/dev/null 2>"$TMPDIR"/debug_sh_bug.log

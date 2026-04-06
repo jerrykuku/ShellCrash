@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Copyright (C) Juewuy
 
 #初始化目录
@@ -40,8 +40,8 @@ if [ -n "$test" -o -n "$(pidof CrashCore)" ]; then
 	cronload | grep -v '^$' >"$TMPDIR"/cron_tmp
 	[ -s "$CRASHDIR"/task/cron ] && cat "$CRASHDIR"/task/cron >>"$TMPDIR"/cron_tmp
 	[ -s "$CRASHDIR"/task/running ] && cat "$CRASHDIR"/task/running >>"$TMPDIR"/cron_tmp
-	[ "$bot_tg_service" = ON ] && echo "* * * * * /bin/sh $CRASHDIR/starts/start_legacy_wd.sh bot_tg #ShellCrash-TG_BOT守护进程" >>"$TMPDIR"/cron_tmp
-	[ "$start_old" = ON ] && echo "* * * * * /bin/sh $CRASHDIR/starts/start_legacy_wd.sh shellcrash #ShellCrash保守模式守护进程" >>"$TMPDIR"/cron_tmp
+	[ "$bot_tg_service" = ON ] && echo "* * * * * /bin/bash $CRASHDIR/starts/start_legacy_wd.sh bot_tg #ShellCrash-TG_BOT守护进程" >>"$TMPDIR"/cron_tmp
+	[ "$start_old" = ON ] && echo "* * * * * /bin/bash $CRASHDIR/starts/start_legacy_wd.sh shellcrash #ShellCrash保守模式守护进程" >>"$TMPDIR"/cron_tmp
 	awk '!x[$0]++' "$TMPDIR"/cron_tmp >"$TMPDIR"/cron_tmp2 #删除重复行
 	cronadd "$TMPDIR"/cron_tmp2
 	rm -f "$TMPDIR"/cron_tmp "$TMPDIR"/cron_tmp2
