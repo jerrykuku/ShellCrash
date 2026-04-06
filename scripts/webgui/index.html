@@ -249,7 +249,7 @@ input:focus,select:focus{outline:none;border-color:var(--accent)}
 // Config & helpers
 // =====================================================================
 const API = '/cgi-bin/api.sh';
-let token = localStorage.getItem('sc_token') || '';
+let token = sessionStorage.getItem('sc_token') || '';
 
 function qs(params) {
   const p = Object.assign({ token }, params);
@@ -265,7 +265,7 @@ async function api(action, subaction, params = {}) {
     const r = await fetch(url);
     return await r.json();
   } catch (e) {
-    return { ok: false, message: 'network_error' };
+    return { ok: false, message: 'network_error: ' + e.message };
   }
 }
 
@@ -308,7 +308,7 @@ function openAuthModal() {
 }
 function saveAuth() {
   token = document.getElementById('auth-input').value.trim();
-  localStorage.setItem('sc_token', token);
+  sessionStorage.setItem('sc_token', token);
   document.getElementById('auth-modal').classList.add('hidden');
   refreshStatus();
 }
@@ -365,14 +365,14 @@ async function loadSubs() {
         <div class="sub-link">${esc(s.link)}</div>
       </div>
       <div class="btns">
-        <button class="btn btn-ghost btn-sm" onclick="openEditSub(${JSON.stringify(s)})">编辑</button>
-        <button class="btn btn-danger btn-sm" onclick="delSub('${esc(s.name)}')">删除</button>
+        <button class="btn btn-ghost btn-sm" data-sub="${esc(JSON.stringify(s))}" onclick="openEditSubFromBtn(this)">编辑</button>
+        <button class="btn btn-danger btn-sm" data-name="${esc(s.name)}" onclick="delSubFromBtn(this)">删除</button>
       </div>
     </li>`).join('');
 }
 
 function esc(s) {
-  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
 function openAddSub() {
@@ -441,6 +441,15 @@ async function saveSub() {
   closeSubModal();
   toast('订阅已保存');
   loadSubs();
+}
+
+function openEditSubFromBtn(btn) {
+  const s = JSON.parse(btn.dataset.sub);
+  openEditSub(s);
+}
+
+function delSubFromBtn(btn) {
+  delSub(btn.dataset.name);
 }
 
 async function delSub(name) {

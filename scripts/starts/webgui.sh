@@ -26,7 +26,14 @@ webgui_start() {
     [ ! -d "$WEB_DIR" ] && { echo "webgui directory not found: $WEB_DIR" >&2; return 1; }
     chmod +x "$WEB_DIR/cgi-bin/api.sh" 2>/dev/null
     busybox httpd -f -p "$WEB_PORT" -h "$WEB_DIR" &
-    echo $! >"$PID_FILE"
+    httpd_pid=$!
+    echo "$httpd_pid" >"$PID_FILE"
+    sleep 1
+    if ! kill -0 "$httpd_pid" 2>/dev/null; then
+        rm -f "$PID_FILE"
+        echo "webgui httpd failed to start on port $WEB_PORT" >&2
+        return 1
+    fi
     return 0
 }
 

@@ -11,6 +11,14 @@ printf "\r\n"
 
 [ "$REQUEST_METHOD" = "OPTIONS" ] && exit 0
 
+# Reject excessively large POST bodies
+if [ "$REQUEST_METHOD" = "POST" ] && [ -n "$CONTENT_LENGTH" ]; then
+    [ "$CONTENT_LENGTH" -gt 65536 ] 2>/dev/null && {
+        printf '{"ok":false,"message":"request_too_large"}\n'
+        exit 1
+    }
+fi
+
 # ---- URL-decode a single percent-encoded string ----
 urldecode() {
     printf '%s' "$1" | awk '
@@ -48,6 +56,12 @@ urldecode() {
 SCRIPT_DIR=$(cd "$(dirname "$0")" 2>/dev/null && pwd)
 [ -z "$CRASHDIR" ] && CRASHDIR=$(cd "$SCRIPT_DIR/../.." 2>/dev/null && pwd)
 export CRASHDIR
+
+# Validate that web_control.sh exists
+[ -x "$CRASHDIR/web_control.sh" ] || {
+    printf '{"ok":false,"message":"web_control_not_found"}\n'
+    exit 1
+}
 
 # ---- Read query string (GET or POST) ----
 if [ "$REQUEST_METHOD" = "POST" ] && [ -n "$CONTENT_LENGTH" ]; then
