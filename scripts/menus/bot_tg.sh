@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 [ -z "$CRASHDIR" ] && CRASHDIR=$( cd $(dirname $0);cd ..;pwd)
 . "$CRASHDIR"/libs/web_json.sh
