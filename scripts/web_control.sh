@@ -9,9 +9,6 @@
 [ ! -d "$TMPDIR" ] && mkdir -p "$TMPDIR"
 
 LOCKDIR="$TMPDIR/web_control.lock"
-MAX_LOCK_ATTEMPTS=50
-MAX_NAME_LENGTH=12
-MAX_TABLE_VALUE=100000
 
 json_escape() {
     printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\r/\\r/g; s/\n/\\n/g'
@@ -40,7 +37,7 @@ acquire_lock() {
             [ -n "$lock_pid" ] && ! kill -0 "$lock_pid" 2>/dev/null && rm -rf "$LOCKDIR"
         fi
         i=$((i + 1))
-        [ "$i" -ge "$MAX_LOCK_ATTEMPTS" ] && json_err "busy"
+        [ "$i" -ge 50 ] && json_err "busy"
         sleep 0.1
     done
     echo "$$" >"$LOCKDIR/pid"
@@ -83,22 +80,7 @@ valid_onoff() {
 }
 
 valid_name() {
-    rest=$((MAX_NAME_LENGTH - 1))
-    echo "$1" | grep -Eq "^[A-Za-z_][A-Za-z0-9_.-]{0,${rest}}$"
-}
-
-valid_ipv4() {
-    ip="$1"
-    echo "$ip" | grep -Eq '^([0-9]{1,3}\.){3}[0-9]{1,3}$' || return 1
-    OLD_IFS="$IFS"
-    IFS='.'
-    set -- $ip
-    IFS="$OLD_IFS"
-    for o in "$@"; do
-        is_int "$o" || return 1
-        [ "$o" -ge 0 ] && [ "$o" -le 255 ] || return 1
-    done
-    return 0
+    echo "$1" | grep -Eq '^[A-Za-z_][A-Za-z0-9_.-]{0,11}$'
 }
 
 valid_link() {
@@ -182,7 +164,7 @@ set_cfg_value() {
         ;;
     table)
         is_int "$val" || return 1
-        [ "$val" -ge 1 ] && [ "$val" -le "$MAX_TABLE_VALUE" ] || return 1
+        [ "$val" -ge 1 ] && [ "$val" -le 100000 ] || return 1
         ;;
     disoverride)
         echo "$val" | grep -Eq '^(0|1)$' || return 1
@@ -194,7 +176,7 @@ set_cfg_value() {
 
     case "$key" in
     host)
-        if [ -n "$val" ] && ! valid_ipv4 "$val"; then
+        if [ -n "$val" ] && ! echo "$val" | grep -Eq '^([0-9]{1,3}\.){3}[0-9]{1,3}$'; then
             return 1
         fi
         ;;
